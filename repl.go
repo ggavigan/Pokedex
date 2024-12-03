@@ -5,13 +5,20 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ggavigan/Pokedex/internal/pokeapi"
 )
 
-func startRepl() {
+type config struct {
+	pokeapiClient    pokeapi.Client
+	nextLocationsURL *string
+	prevLocationsURL *string
+}
+
+func startRepl(cfg *config) {
 	reader := bufio.NewScanner(os.Stdin)
 	for {
-		fmt.Println("Welcome to Pokedex! For a list of commands, enter 'help'")
-		fmt.Println("Pokedex >")
+		fmt.Print("Pokedex > ")
 		reader.Scan()
 
 		words := cleanInput(reader.Text())
@@ -19,38 +26,32 @@ func startRepl() {
 			continue
 		}
 
-		commandWord := words[0]
+		commandName := words[0]
 
-		command, exists := getCommands()[commandWord]
+		command, exists := getCommands()[commandName]
 		if exists {
-			err := command.callback()
+			err := command.callback(cfg)
 			if err != nil {
 				fmt.Println(err)
 			}
 			continue
 		} else {
-			fmt.Println("command does not exists")
+			fmt.Println("Unknown command")
 			continue
 		}
 	}
 }
 
 func cleanInput(text string) []string {
-	lower := strings.ToLower(text)
-	words := strings.Fields(lower)
-
+	output := strings.ToLower(text)
+	words := strings.Fields(output)
 	return words
 }
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
-}
-
-type Config struct {
-	previousURL string
-	nextURL     string
+	callback    func(*config) error
 }
 
 func getCommands() map[string]cliCommand {
@@ -60,20 +61,20 @@ func getCommands() map[string]cliCommand {
 			description: "Displays a help message",
 			callback:    commandHelp,
 		},
-		"exit": {
-			name:        "exit",
-			description: "Exit the Pokedex",
-			callback:    commandExit,
-		},
-		"mapf": {
-			name:        "mapf",
-			description: "Next location area page",
+		"map": {
+			name:        "map",
+			description: "Get the next page of locations",
 			callback:    mapf,
 		},
 		"mapb": {
 			name:        "mapb",
-			description: "Previous location area page",
+			description: "Get the previous page of locations",
 			callback:    mapb,
+		},
+		"exit": {
+			name:        "exit",
+			description: "Exit the Pokedex",
+			callback:    commandExit,
 		},
 	}
 }
